@@ -2,3 +2,5 @@
 rebuild.sh
 
 .vscode/
+
+build/
