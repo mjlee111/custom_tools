@@ -4,3 +4,5 @@ rebuild.sh
 .vscode/
 
 build/
+
+*.sh

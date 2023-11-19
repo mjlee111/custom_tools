@@ -2,6 +2,8 @@
 #define TOOLS_H
 
 #include <QMainWindow>
+#include <QtWidgets>
+
 #include <ctime>
 #include <iostream>
 #include <QTimer>
@@ -23,11 +25,11 @@
 
 #define WINDOW_WIDTH 190
 #define WINDOW_HEIGHT 500
+#define MACRO_1_TEXT "Macro 1 is not set !"
 
-QT_BEGIN_NAMESPACE
-namespace Ui
+QT_BEGIN_NAMESPACE namespace Ui
 {
-class tools;
+  class tools;
 }
 QT_END_NAMESPACE
 
@@ -50,13 +52,24 @@ public:
 
   unsigned long long lastTotalUser, lastTotalUserLow, lastTotalSys, lastTotalIdle;
 
+protected:
 public Q_SLOTS:
   void updateFromTimer();
   void getCurrentTimeAsString();
   void on_opacity_valueChanged(int value);
+  void on_macro_btn_1_clicked();
+  void on_macro_setup_btn_1_clicked();
+  void on_move_btn_clicked();
 
 private:
   Ui::tools* ui;
+  bool is_movable = false;
+
+  std::string macro_1_name = "macro 1";
+  std::string macro_1 = "echo " MACRO_1_TEXT;
+
+  QString macro[3];
+  QString macro_name[3];
 
   QTimer* _500ms_timer;
   QTimer* _10ms_timer;
@@ -71,5 +84,8 @@ private:
   double getVirtualMemory();
   double getPhysicalMemory();
   void updateMemoryPlot();
+  void showMacroSettingWindow(const QString& windowTitle, int macro_number);
+  void saveToConfigFile(const QString& macroCmd, const QString& macroName, int macro_number);
+  void read_config(QString filename, QString macro[], QString macro_name[]);
 };
 #endif  // TOOLS_H

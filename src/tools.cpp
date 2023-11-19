@@ -4,7 +4,24 @@
 tools::tools(QWidget* parent) : QMainWindow(parent), ui(new Ui::tools)
 {
   ui->setupUi(this);
+  std::cout << "sibal" << std::endl;
+  char* username;
+  username = std::getenv("USER");
+  std::string path;
+  if (username != nullptr)
+  {
+    path = "/home/" + std::string(username) + "/custom.config";
+  }
+  else
+  {
+    return;
+  }
+  std::cout << "sibal" << std::endl;
 
+  QString pathQ = QString::fromStdString(path);
+  std::cout << "sibal" << std::endl;
+  read_config(pathQ, macro, macro_name);
+  std::cout << "sibal" << std::endl;
   cpu_curve = new QwtPlotCurve("CPU");
   memory_physical_curve = new QwtPlotCurve("CPU");
 
@@ -34,7 +51,7 @@ void tools::uiInitialize()
   QRect mainScreenGeometry = screen->geometry();
   int desktopWidth = mainScreenGeometry.width();
   int desktopHeight = mainScreenGeometry.height();
-  std::cout << desktopWidth << " " << desktopHeight << std::endl;
+  // std::cout << desktopWidth << " " << desktopHeight << std::endl;
   this->setGeometry(desktopWidth - WINDOW_WIDTH, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
   this->setFixedSize(WINDOW_WIDTH, WINDOW_HEIGHT);
   this->setWindowOpacity(0.8);
@@ -175,4 +192,153 @@ void tools::on_opacity_valueChanged(int value)
 {
   double opacity = (double)value / 100;
   this->setWindowOpacity(opacity);
+}
+
+void tools::on_macro_btn_1_clicked()
+{
+  if (macro[0].isEmpty())
+  {
+    QMessageBox::warning(nullptr, "Empty Macro", "Macro " + QString::number(1) + " is empty!");
+    return;
+  }
+  else
+  {
+    std::string command = macro[0].toStdString();
+    system(command.c_str());
+  }
+}
+
+void tools::on_macro_setup_btn_1_clicked()
+{
+  showMacroSettingWindow(macro_name[0], 0);
+}
+
+void tools::on_move_btn_clicked()
+{
+  Qt::WindowFlags flags = this->windowFlags();
+
+  if (is_movable)
+  {
+    flags = flags | Qt::FramelessWindowHint;
+    this->setWindowFlags(flags);
+    is_movable = false;
+  }
+  else if (!is_movable)
+  {
+    flags = flags & ~Qt::FramelessWindowHint;
+    this->setWindowFlags(flags);
+    is_movable = true;
+  }
+  this->show();
+}
+
+void tools::saveToConfigFile(const QString& macroCmd, const QString& macroName, int macro_number)
+{
+  char* username;
+  username = std::getenv("USER");
+  std::string path;
+  if (username != nullptr)
+  {
+    path = "/home/" + std::string(username) + "/custom.config";
+  }
+  else
+  {
+    return;
+  }
+  std::ofstream configFile(path, std::ios::app);  // Open the config file in append mode
+  if (configFile.is_open())
+  {
+    configFile << "macro" << macro_number + 1 << " : " << macroCmd.toStdString() << std::endl;
+    configFile << "macro" << macro_number + 1 << " name: " << macroName.toStdString() << std::endl;
+    configFile.close();
+  }
+  else
+  {
+    qDebug() << "Unable to open config file!";
+  }
+}
+
+void tools::showMacroSettingWindow(const QString& windowTitle, int macro_number)
+{
+  QWidget* macroWindow = new QWidget;
+  macroWindow->setWindowTitle(windowTitle);
+
+  // Styling for macroWindow
+  QString windowStyle = "background-color: rgb(60, 58, 57); color: white;";
+  windowStyle += "font: 11pt;";
+
+  macroWindow->setStyleSheet(windowStyle);
+
+  QLabel* macroCmdLabel = new QLabel("Macro Command:");
+  QTextEdit* macroCommandTextEdit = new QTextEdit;
+
+  QLabel* macroNmLabel = new QLabel("Macro Name:");
+  QTextEdit* macroNameTextEdit = new QTextEdit;
+
+  QPushButton* saveButton = new QPushButton("Save");
+  QPushButton* cancelButton = new QPushButton("Cancel");
+
+  QVBoxLayout* layout = new QVBoxLayout;
+  layout->addWidget(macroCmdLabel);
+  layout->addWidget(macroCommandTextEdit);
+  layout->addWidget(macroNmLabel);
+  layout->addWidget(macroNameTextEdit);
+  layout->addWidget(saveButton);
+  layout->addWidget(cancelButton);
+
+  QObject::connect(saveButton, &QPushButton::clicked, macroWindow, [=]() {
+    QString macroCmd = macroCommandTextEdit->toPlainText();
+    QString macroNm = macroNameTextEdit->toPlainText();
+    saveToConfigFile(macroCmd, macroNm, macro_number);
+
+    macro[macro_number] = macroCmd;
+    macro_name[macro_number] = macroNm;
+
+    macroWindow->hide();  // Hide the window after saving
+  });
+
+  QObject::connect(cancelButton, &QPushButton::clicked, macroWindow, [=]() {
+    macroWindow->hide();  // Hide the window without saving
+  });
+
+  macroWindow->setLayout(layout);
+  macroWindow->show();
+}
+
+void tools::read_config(QString filename, QString macro[], QString macro_name[])
+{
+  QFile file(filename);
+  if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+  {
+    qDebug() << "Cannot open file";
+    return;
+  }
+
+  QTextStream in(&file);
+  int i = 0;
+  while (!in.atEnd())
+  {
+    QString line = in.readLine();
+    int index = line.indexOf(":");
+    if (index != -1)
+    {
+      if (i < 3)
+      {  // Ensure array index doesn't go out of bounds
+        macro[i] = line.left(index);
+        macro_name[i] = line.mid(index + 1);
+        i++;
+      }
+      else
+      {
+        qDebug() << "Exceeded array bounds";  // Debug: Check if exceeding array bounds
+      }
+    }
+    else
+    {
+      qDebug() << "Invalid line format";  // Debug: Check invalid line format
+    }
+  }
+
+  file.close();
+  qDebug() << "Read operation completed";  // Debug: Check if reading completed without issues
 }
